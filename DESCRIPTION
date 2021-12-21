@@ -1,0 +1,15 @@
+Package: StatComp21085
+Type: Package
+Title: Bandwidth selection and kernel density estimation
+Version: 1.0
+Date: 2021-12-23
+Author: Xiaoke Zhang
+Maintainer: Xiaoke Zhang <zxk170091@mail.ustc.edu.cn>
+Description: Using kernel density estimation to estimate the data density function. As for kernel function, this package use Gaussian, Rectangular, stationarity, Epanechnikov, biweight and cosine six basic kernel functions. In the bandwidth selection part, Scott rule and Silverman rule are given, and there is also a bandwidth which is estimated by cross validation.
+License: GPL (>= 2)
+Imports: Rcpp, microbenchmark, bootstrap, boot, MASS, knitr, rmarkdown, stats
+LinkingTo: Rcpp
+RoxygenNote: 7.1.2
+Encoding: UTF-8
+VignetteBuilder: knitr
+Depends: R (>= 2.10)

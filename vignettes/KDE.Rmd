@@ -1,0 +1,426 @@
+---
+title: "KDE"
+author: '21085'
+date: "2021/12/23"
+output: html_document
+vignette: >
+  %\VignetteIndexEntry{Kernel Density Estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+## Kernel Function
+
+Kernel functions are usually probability density functions,  they integrate
+to one and $K(u)\geq 0$ for all $u$ in the domain of $K$. An immediate consequence of $\int K(u) d u=1$ is $\int \widehat{f}_{h}(x) d x=1$, i.e. the kernel density estimator is a pdf, too. Moreover, $\widehat{f}_{h}$ will inherit all the continuity and differentiability properties of $K$. For instance, if $K$ is $v$ times continuously differentiable then the same will hold true for $\widehat{f}_{h}$. On a more intuitive level this "inheritance property" of $\widehat{f}_{h}$ is reflected in the smoothness of its graph. We put six types of kernel functions in this package, including  gaussian kernel, rectangular kernel, triangular kernel, epanechnikov kernel, biweight kernel and cosine kernel.
+
+Now we can give the following general form of the kernel density estimator of a probability density $f$, based on a random sample $X_{1}, X_{2}, \ldots, X_{n}$ from $f$ :
+$$
+\widehat{f}_{h}(x)=\frac{1}{n} \sum_{i=1}^{n} K_{h}\left(x-X_{i}\right),
+$$
+where
+$$
+K_{h}(\bullet)=\frac{1}{h} K(\bullet / h) .
+$$
+$K(\bullet)$ is some kernel function like those given before and $h$ denotes the bandwidth.
+
+
+## Bandwidth Selection
+
+The Bandwidth $h$ controls the smoothness of the estimate and the
+choice of $h$ is a crucial problem. It is hard to determine which value of h provides the optimal degree of smoothness without some formal criterion at hand. 
+
+For the kernel density estimator the MISE is given by
+$$
+\begin{aligned}
+\operatorname{MISE}\left(\widehat{f}_{h}\right)=& \int \operatorname{MSE}\left\{\widehat{f}_{h}(x)\right\} d x \\
+=& \frac{1}{n h}\|K\|_{2}^{2} \int f(x) d x \\
+&+\frac{h^{4}}{4}\left\{\mu_{2}(K)\right\}^{2} \int\left\{f^{\prime \prime}(x)\right\}^{2} d x+o\left(\frac{1}{n h}\right)+o\left(h^{4}\right) \\
+=& \frac{1}{n h}\|K\|_{2}^{2}+\frac{h^{4}}{4}\left\{\mu_{2}(K)\right\}^{2}\left\|f^{\prime \prime}\right\|_{2}^{2}+o\left(\frac{1}{n h}\right)+o\left(h^{4}\right), \\
+& \text { as } h \rightarrow 0, n h \rightarrow \infty .
+\end{aligned}
+$$
+
+An approximate formula for the MISE, called AMISE, can be given as
+$$
+\operatorname{AMISE}\left(\widehat{f}_{h}\right)=\frac{1}{n h}\|K\|_{2}^{2}+\frac{h^{4}}{4}\left\{\mu_{2}(K)\right\}^{2}\left\|f^{\prime \prime}\right\|_{2}^{2} .
+$$
+The AMISE optimal bandwidth is
+$$
+h_{o p t}=\left(\frac{\|K\|_{2}^{2}}{\left\|f^{\prime \prime}\right\|_{2}^{2}\left\{\mu_{2}(K)\right\}^{2} n}\right)^{1 / 5} \sim n^{-1 / 5} .
+$$
+Apparently, the problem of having to deal with unknown quantities has not been solved completely as $h_{o p t}$ still depends on $\left\|f^{\prime \prime}\right\|_{2}^{2}$. 
+
+### Silverman’s Rule of Thumb
+
+This is a plug-in method, suppose we knew or assumed that the unknown density $f$ belongs to the family of normal distributions with mean $\mu$ and variance $\sigma^{2}$ then we have
+$$
+\begin{aligned}
+\left\|f^{\prime \prime}\right\|_{2}^{2} &=\sigma^{-5} \int\left\{\varphi^{\prime \prime}(x)\right\}^{2} d x \\
+&=\sigma^{-5} \frac{3}{8 \sqrt{\pi}} \approx 0.212 \sigma^{-5}
+\end{aligned}
+$$
+We can estimate the $\theta$ by $\widehat{\sigma}=\sqrt{\frac{1}{n-1} \sum_{i=1}^{n}\left(x_{i}-\bar{x}\right)^{2}}$. We can get the following "rule-of-thumb" bandwidth $\widehat{h}_{r o t}$
+$$
+\begin{aligned}
+\widehat{h}_{r o t} &=\left(\frac{\|\varphi\|_{2}^{2}}{\left\|\widehat{f^{\prime \prime}}\right\|_{2}^{2} \mu_{2}^{2}(\varphi) n}\right)^{1 / 5} \\
+&=\left(\frac{4 \widehat{\sigma}^{5}}{3 n}\right)^{1 / 5} \approx 1.06 \widehat{\sigma} n^{-1 / 5},
+\end{aligned}
+$$
+with $\left\|\widehat{f^{\prime \prime}}\right\|_{2}^{2}=\widehat{\sigma}^{-5} \frac{3}{8 \sqrt{\pi}}$.
+
+
+### The Scott Bandwidth
+
+In the histogram estimator, the AMISE is 
+$$
+\operatorname{AMISE}(h)=\frac{h^2}{12}\|f^{\prime}\|^2+\frac{1}{nh}.
+$$
+
+
+
+### Cross Validation
+
+Consider an alternative distance measure between $\widehat{f}$ and $f$, the integrated squared error (ISE):
+$$
+\operatorname{ISE}(h)=\operatorname{ISE}\left\{\widehat{f}_{h}\right\}=\int\left\{\widehat{f}_{h}-f\right\}(x)^{2} d x=\int\left\{\widehat{f}_{h}(x)-f(x)\right\}^{2} d x .
+$$
+Let us rewrite the ISE
+$$
+\operatorname{ISE}(h)=\int \widehat{f}_{h}^{2}(x) d x-2 \int\left\{\widehat{f}_{h} f\right\}(x) d x+\int f^{2}(x) d x
+$$
+The criterion function we seek to minimize with respect to $h$ :
+$$
+\operatorname{ISE}(h)=\int \widehat{f}_{h}^{2}(x) d x-2 E\left\{\widehat{f}_{h}(X)\right\}+\int f^{2}(x) d x .
+$$
+Give the so-called cross-validation criterion
+$$
+C V(h)=\int \widehat{f}_{h}^{2}(x) d x-\frac{2}{n(n-1)} \sum_{i=1}^{n} \sum_{j=1, i \neq j}^{n} K_{h}\left(X_{i}-X_{j}\right)
+$$
+CV choose a bandwidth based on a reasonable criterion without having to make any assumptions about the family to which the unknown density belongs.
+
+## Density Estimation
+
+After selecting the kernel function and the bandwidth, we can estimate the density function
+$$
+\widehat{f}_{h}(x)=\frac{1}{n} \sum_{i=1}^{n} K_{h}\left(x-X_{i}\right).
+$$
+
+## R Functions
+
+### $ker()$
+
+Compute the value of a certain type of kernel function at a certain point, with total 6 types of kernels.
+
+```{r}
+ker<-function(x, type="gaussian"){
+  
+  # First check the correctness of the type input
+  types<-c("gaussian", "rectangular", "triangular", "epanechnikov", "biweight", "cosine")
+  if(sum(type==types)==0){
+    print("Undefined kernel input!")
+    return(NULL)
+  }
+  
+  # Then compute the kernel
+  if(type=="gaussian"){
+    w<-dnorm(x)
+  }
+  else if(type=="rectangular"){
+    w<-ifelse(abs(x)<1,1/2,0)
+  }
+  else if(type=="triangular"){
+    w<-ifelse(abs(x)<1,1-abs(x),0)
+  }
+  else if(type=="epanechnikov"){
+    w<-ifelse(abs(x)<1,0.75*(1-x^2),0)
+  }
+  else if(type=="biweight"){
+    w<-ifelse(abs(x)<1,15/16*(1-x^2)^2,0)
+  }
+  else if(type=="cosine"){
+    w<-ifelse(abs(x)<1,pi/4*cos(x*pi/2),0)
+  }
+  return(w)
+}
+```
+
+
+### $ker.bandwidth()$
+
+Get the bandwidth of a data set, the types of bandwidthes of this function is Scott and Silverman.
+
+```{r}
+ker.bandwidth<-function(data, rule="Silverman"){
+  
+  # Check the data
+  if(is.numeric(data)==FALSE){
+    print("Wrong data!")
+    return(NULL)
+  }
+  
+  # Check the type
+  types<-c("Scott", "Silverman")
+  if(sum(rule==types)==0){
+    print("Wrong selection rule!")
+    return(NULL)
+  }
+  
+  # Having confirmed the validity of the inputs, begin our work
+  n<-length(data)
+  sigma<-sd(data)
+  if(rule=="Scott"){
+    h<-1.06*sigma*n^(-1/5)
+  }
+  else if(rule=="Silverman"){
+    s<-min(sigma, IQR(data)/1.34)
+    h<-0.9*s*n^(-1/5)
+  }
+  return(h)
+}
+```
+
+
+### $cv()$
+
+Compute the integrated squared error estimated by cross validation.
+
+```{r}
+cv <- function(data, kernel = "gaussian", bw){
+  # First of all, check if data is a numeric
+  if(is.numeric(data)==FALSE){
+    print("Wrong data!")
+    return(NULL)
+  }
+  
+  # Then check if the kernel type is valid
+  if(is.null(ker(0, kernel))){  
+    return(NULL)
+  }
+  
+  # If valid, begin our work
+  n <- length(data)
+  t <- 0
+  estimation2 <- function(x){  
+    s <- 0
+    for(i in 1:n){
+      s <- s + 1/(n*bw)*ker((data[i]-x)/bw, type = kernel)
+    }
+    return(s^2)
+  }
+  t1 <- integrate(estimation2, -Inf, Inf)$value
+  for(i in 1:n){
+    for(j in 1:n){
+      if(j!=i){
+        t <- t + ker((data[i]-data[j])/bw, kernel)/bw
+      }
+    }
+  }
+  
+  t2 <- 2*t/(n*(n-1))
+  return(t1 - t2)
+}
+```
+
+
+
+### $ker.estimation$ 
+
+Compute kernel density estimates of a data set.
+
+```{r}
+ker.estimation<-function(data, bw, kernel="gaussian"){
+  
+  # First of all, check if data is a numeric
+  if(is.numeric(data)==FALSE){
+    print("Wrong data!")
+    return(NULL)
+  }
+  
+  # Then check if the kernel type is valid
+  if(is.null(ker(0, kernel))){  
+    return(NULL)
+  }
+  
+  # If valid, begin our work
+  n<-length(data)
+  s<-0
+  estimation<-function(x){  
+    m<-length(x)
+    fhat<-rep(0,m)
+    for(i in 1:m){
+      s<-0
+      for(j in 1:n){
+        s<-s+1/(n*bw)*ker((data[j]-x[i])/bw,      type=kernel)
+      }
+      fhat[i]<-s
+    }
+    return(fhat)
+  }
+  return(estimation)
+}
+```
+
+
+
+
+## C++ Functions
+
+### $gcd()$
+
+Calculate the greatest common divisor of two numbers.
+
+```{r}
+library(Rcpp)
+cppFunction('int gcd(int a,int b){     
+      int min,r,x;
+      if(a<b){
+            min=a;
+            a=b;
+            b=min;
+      }
+      r=a%b;
+      while(r!=0){
+            a=b;
+            b=r;
+            r=a%b;
+      }
+      x=b;
+      return x;
+}')
+```
+
+
+### $MinMerge()$
+
+Take the minimum of two vectors and merge them.
+
+```{r}
+cppFunction('NumericVector MinMerge(NumericVector x, NumericVector y) {
+  int n = std::min(x.size(), y.size());
+  NumericVector x1 = rep_len(x, n);
+  NumericVector y1 = rep_len(y, n);
+  NumericVector out(n);
+  for (int i = 0; i < n; ++i) {
+    out[i] = std::min(x1[i], y1[i]);
+  }
+  return out;
+}')
+```
+
+
+
+### $rbivariate_c()$
+
+Generate a bivariate sampler using Rcpp.
+
+```{r}
+cppFunction('NumericMatrix rbivariate_c(int N, int n, double a, double b) {
+  NumericMatrix mat(N, 2);
+  NumericVector v(0, 0.5);         // initial value
+  int burn = 1000;      // burn-in length
+  mat(0,_) = v; 
+  for(int i = 1; i < N; i++) {
+    double X2 = mat(i-1,1);
+    mat(i,0) = as<int>(rbinom(1, n, X2));
+    int X1 = mat(i,0);
+    mat(i,1) = as<double>(rbeta(1, X1 + a, n - X1 + b));
+  }
+  return(mat(Range(burn, N-1), _));
+}')
+```
+
+### $gibbsC()$
+
+A Gibbs sampler using Rcpp.
+
+```{r}
+cppFunction('NumericMatrix gibbsC(int N, double a, double b, int n, int thin) {
+  NumericMatrix mat(N, 2);
+  double x = floor(n/2), y = 0.5;
+  for(int i = 0; i < N; i++) {
+    for(int j = 0; j < thin; j++) {
+      x = rbinom(1, n, y)[0];
+      y = rbeta(1, x+a, n-x+b)[0];
+    }
+    mat(i, 0) = x;
+    mat(i, 1) = y;
+  }
+  return(mat);
+}')
+```
+
+
+
+## Some examples
+
+### C++ Functions
+
+```{r}
+# the greatest common divisor
+m <- 13
+n <- 39
+gcd(m, n)
+```
+
+```{r}
+# take the minimum of two vectors and merge them.
+a <- c(2, 5, 9, 3)
+b <- c(1, 6, 4)
+MinMerge(a, b)
+```
+
+```{r}
+# Generate a bivariate sampler using Rcpp.
+X <- rbivariate_c(10000, 15, 1, 1)
+plot(X[,1], X[,2], xlab = "x", ylab = "y", main = "A bivariate sampler")
+```
+
+### R Functions
+
+-Show different kernel functions.
+
+```{r}
+par(mfrow=c(1,2))
+# gaussian kernel
+gaussian_kernel <- function(x){
+  return(ker(x,"gaussian"))
+}
+curve(gaussian_kernel, -5, 5, ylab = "density", main = "Gaussian kernel")
+
+# 
+epanechnikov_kernel <- function(x){
+  return(ker(x,"epanechnikov"))
+}
+curve(epanechnikov_kernel, -3, 3, ylab = "density", main = "Epanechnikov kernel")
+```
+
+
+-Draw the histograms of the original data,and compare them with the plots produced by our function and by density function.
+```{r}
+set.seed(1234)
+x <- rexp(1000,1)
+hist(x, breaks = 100)
+```
+
+-Choose the bandwidth.
+
+```{r}
+Silverman.bw <- ker.bandwidth(x)    # Silverman bandwidth
+Scott.bw <- ker.bandwidth(x, "Scott")     # Scott bandwidth
+
+# Calculate the AMISE by Cross Validation
+cv(x, kernel = "gaussian", Silverman.bw)
+cv(x, kernel = "gaussian", Scott.bw)
+```
+
+We can find that the Scott bandwidth has smaller AMISE.
+
